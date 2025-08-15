@@ -41,25 +41,6 @@ async def CreateUser(User: UserRequest,
         content=user_return
     )
 
-#Role:superadmin,get user by id
-@router.get("/{user_id}",dependencies=[Depends(auth_handler.requires_role("superadmin"))])
-async def get_user(user_id:str,
-                   user_db:AsyncIOMotorCollection =Depends(get_user_collection)):
-    try:
-        user =await user_db.users.find_one({"_id": ObjectId(user_id)})
-        if not user:
-            return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"message": "User not found"})
-        
-        user_response = {
-            "_id": ObjectId(user["_id"]),
-            "email": user["email"],
-            "name": user["nme"],
-            "created_at": user["created_at"].isoformat(),
-            "updated_at": user.get("updated_at", None)
-        }
-        return JSONResponse(status_code=status.HTTP_200_OK, content=user_response)
-    except Exception as e:
-        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"message": str(e)})
 #Delete current User
 #Role:  User
 @router.delete("/",dependencies=[Depends(auth_handler.requires_role("user"))])

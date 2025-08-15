@@ -5,12 +5,12 @@ from app.dependencies.utils import hash_password
 from app.database.db import get_admin_collection
 from app.dependencies import auth_handler
 from datetime import datetime, timezone
-from typing import Any, Dict
+from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorCollection 
 
 router=APIRouter(prefix="/users",tags=["users"])
 
-#role:superadmin ,register new admin
+#   role:superadmin ,register new admin
 @router.post("/register-admin",
              dependencies=[Depends(auth_handler.requires_role("superadmin"or"admin"))])
 async def create_admin(admin: UserRequest,
@@ -48,8 +48,45 @@ async def create_admin(admin: UserRequest,
     
     return {"message": f"'{role}' created successfully."}
 
-#Delete a User
-#Role: Super Admin
+#   get user function will be changed according to the use cases
+#   Role:super admin
+@router.get("/",dependencies=[Depends(auth_handler.requires_role("superadmin"))])
+async def get_users(skip: int = 0, limit: int = 10,
+                    user_db: AsyncIOMotorCollection  = Depends(auth_handler.get_user_collection)):
+    users_cursor = user_db.users.find({}, {"password": 0}).limit(limit).skip(skip)  # exclude password
+    users_list = []
+    async for user_doc in users_cursor:
+        user_doc["id"] = str(user_doc.pop("_id"))
+        # Check if the datetime field exists and convert it to an ISO 8601 string
+        if "created_at" in user_doc and isinstance(user_doc["created_at"], datetime):
+            user_doc["created_at"] = user_doc["created_at"].isoformat()
+            users_list.append(user_doc)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"users": users_list,"skip":skip,"limit":limit}
+    )
+
+#   Role:superadmin,get user by id
+@router.get("/{user_id}",dependencies=[Depends(auth_handler.requires_role("superadmin"))])
+async def get_user(user_id:str,
+                   user_db:AsyncIOMotorCollection =Depends(auth_handler.get_user_collection)):
+    try:
+        user =await user_db.users.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"message": "User not found"})
+        
+        user_response = {
+            "_id": ObjectId(user["_id"]),
+            "email": user["email"],
+            "name": user["nme"],
+            "created_at": user["created_at"].isoformat(),
+            "updated_at": user.get("updated_at", None)
+        }
+        return JSONResponse(status_code=status.HTTP_200_OK, content=user_response)
+    except Exception as e:
+        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"message": str(e)})
+#   Delete a User
+#   Role: Super Admin
 @router.delete("/",dependencies=[Depends(auth_handler.requires_role("superadmin"or"admin"))])
 async def delete_user(payload:dict=Depends(auth_handler.get_token_payload),
                 admin_db:AsyncIOMotorCollection=Depends(auth_handler.get_admin_collection)):
@@ -76,6 +113,7 @@ async def delete_user(payload:dict=Depends(auth_handler.get_token_payload),
 
 
 #delete admin from database
+#   Role: Superadmin
 @router.delete("/{id}",dependencies=[Depends(auth_handler.requires_role("superadmin"))])
 async def del_admin(current_admin:str=Depends(auth_handler.get_current_admin),
                     admin_db:AsyncIOMotorCollection = Depends(get_admin_collection)):
