@@ -1,7 +1,7 @@
 from fastapi import APIRouter,Depends,HTTPException,status
 from ..models import schemas
 from ..database import db
-from app import auth_utils
+from app.dependencies import auth_utils
 from fastapi.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorCollection
 
@@ -15,9 +15,11 @@ async def create_slot(
     slot: schemas.SlotCreate,
     slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
     station_db: AsyncIOMotorCollection = Depends(db.get_station_collection),
-    current_user:str=Depends(auth_utils.get_current_user)
+    payload:dict=Depends(auth_utils.get_token_payload)
 ):
     try:
+        #get user id from payload
+        user_id=payload.get("sub")
         #check that station id exist
         station_found=station_db.find_one({"station_id":slot.station_id})
         if not station_found:
@@ -26,7 +28,7 @@ async def create_slot(
         # Convert Pydantic model to dict
         slot_data = slot.dict()
         #add admin user_id in slot db
-        slot_data["admin"]=current_user
+        slot_data["admin"]=user_id
         # Insert the new slot
         result = await  slot_db.insert_one(slot_data)
         # Prepare response
@@ -38,7 +40,7 @@ async def create_slot(
 #get slot for users
 @router.get("/")
 async def fetch_slot(skip:int=0,limit:int=0,slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
-               current_user:str=Depends(auth_utils.get_current_user)):
+               payload:str=Depends(auth_utils.get_token_payload)):
     slots_cursor= slot_db.find({"is_available":"True"})
     available_slot=[]
     async for doc in slots_cursor:
@@ -48,7 +50,7 @@ async def fetch_slot(skip:int=0,limit:int=0,slot_db: AsyncIOMotorCollection = De
 # Get  Slot By ID for users
 @router.get("/{id}", response_model=schemas.SlotOut)
 async def get_slot(id:str, slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
-                   current_user:str=Depends(auth_utils.get_current_user)):
+                   payload:str=Depends(auth_utils.get_token_payload)):
     result = await slot_db.find_one({"slot_id":id})
     if not result:
         raise HTTPException(status_code=404, detail="Slot not found")
@@ -65,8 +67,10 @@ async def get_slot(id:str, slot_db: AsyncIOMotorCollection = Depends(db.get_park
 #get all the posted slots for admin
 @router.get("/-admin")
 async def get_slots(slot_db:AsyncIOMotorCollection=Depends(db.get_parking_collection),
-                    current_user:str=Depends(auth_utils.get_current_user)):
-    slots_cursor=slot_db.find({"admin":current_user})
+                    payload:dict=Depends(auth_utils.get_token_payload)):
+    #get user_id from payload
+    user_id=payload.get("sub")
+    slots_cursor=slot_db.find({"admin":user_id})
     slots=[]
     async for documents in slots_cursor:
         documents["_id"]=str(documents["_id"])
