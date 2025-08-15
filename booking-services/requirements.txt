@@ -1,0 +1,8 @@
+motor
+fastapi
+datetime
+pydantic
+python-dotenv
+uvicorn
+python-multipart
+python-jose

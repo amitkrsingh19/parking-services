@@ -1,0 +1,10 @@
+# Python virtual environments
+**/venv/
+
+# Python compiled files
+**/*.pyc
+**/__pycache__/
+
+# Docker-related files
+docker-compose.override.yml
+.env

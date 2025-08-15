@@ -1,0 +1,37 @@
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  user_service:
+    build:
+      context: ./user-services
+      dockerfile: Dockerfile
+    container_name: user-services
+    ports:
+      - "8001:8000"
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      USER_DB_NAME: user_services_db
+
+  parking_services:
+    build:
+      context: ./parking-services
+      dockerfile: Dockerfile
+    container_name: parking-services
+    ports:
+      - "8002:8000"
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      PARKING_DB_NAME: parking_services_db
+
+volumes:
+  mongo_data:
