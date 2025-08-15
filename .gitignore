@@ -1,10 +1,27 @@
-# Python virtual environments
-**/venv/
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-# Python compiled files
-**/*.pyc
-**/__pycache__/
-
-# Docker-related files
-docker-compose.override.yml
+# Virtual environment
+venv/
 .env
+.env.*
+
+# Environment files
+*.env
+.env.local
+.env.development
+.env.production
+
+# VSCode settings (optional)
+.vscode/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Docker volumes/logs
+*.log
+docker-data/
