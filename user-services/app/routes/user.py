@@ -1,10 +1,10 @@
 from fastapi import status, Depends,APIRouter,HTTPException
 from fastapi.responses import JSONResponse
 from app.models.schemas import UserRequest,UpdateUser
-from app.auth.utils import hash_password
+from app.dependencies.utils import hash_password
 from app.database.db import get_user_collection
 from bson import ObjectId
-from app.auth import auth_handler
+from app.dependencies import auth_handler
 from datetime import datetime, timezone
 from typing import Any, Dict
 from motor.motor_asyncio import AsyncIOMotorCollection 
@@ -41,26 +41,10 @@ async def CreateUser(User: UserRequest,
         content=user_return
     )
 
-#get user function will be changed according to the use cases
-#Role:super admin
-@router.get("/")
-async def get_users(skip: int = 0, limit: int = 10,user_db: AsyncIOMotorCollection  = Depends(get_user_collection)):
-    users_cursor = user_db.users.find({}, {"password": 0}).limit(limit).skip(skip)  # exclude password
-    users_list = []
-    async for user_doc in users_cursor:
-        user_doc["id"] = str(user_doc.pop("_id"))
-        # Check if the datetime field exists and convert it to an ISO 8601 string
-        if "created_at" in user_doc and isinstance(user_doc["created_at"], datetime):
-            user_doc["created_at"] = user_doc["created_at"].isoformat()
-            users_list.append(user_doc)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={"users": users_list,"skip":skip,"limit":limit}
-    )
-
 #Role:superadmin,get user by id
-@router.get("/{user_id}")
-async def get_user(user_id:str,user_db:AsyncIOMotorCollection =Depends(get_user_collection)):
+@router.get("/{user_id}",dependencies=[Depends(auth_handler.requires_role("superadmin"))])
+async def get_user(user_id:str,
+                   user_db:AsyncIOMotorCollection =Depends(get_user_collection)):
     try:
         user =await user_db.users.find_one({"_id": ObjectId(user_id)})
         if not user:
@@ -76,9 +60,35 @@ async def get_user(user_id:str,user_db:AsyncIOMotorCollection =Depends(get_user_
         return JSONResponse(status_code=status.HTTP_200_OK, content=user_response)
     except Exception as e:
         return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"message": str(e)})
+#Delete current User
+#Role:  User
+@router.delete("/",dependencies=[Depends(auth_handler.requires_role("user"))])
+async def delete_user(payload:dict=Depends(auth_handler.get_token_payload),
+                user_db:AsyncIOMotorCollection=Depends(auth_handler.get_user_collection)):
+    #check for the user exists in database
+    user_id_from_token=payload.get("sub")
+           # Check if a user ID was found in the token
+    if not user_id_from_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User ID not found in token"
+            )
+    user= await user_db.find_one({"_id":user_id_from_token})
+    if user:
+        #delete the user
+        result=await user_db.delete_one({"_id":user_id_from_token})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found or already deleted"
+            )
+    # Return a 204 No Content for a successful deletion
+    return JSONResponse(status_code=status.HTTP_204_NO_CONTENT,
+                        content={"message":"user deleted successfully"})
 
 #Role:User, profile
-@router.get("/profile/me")
+@router.get("/profile/me",dependencies=[Depends(auth_handler.requires_role("user"))])
 async def get_profile(user_db:AsyncIOMotorCollection =Depends(get_user_collection),
                 current_user:Dict[str, Any]=Depends(auth_handler.get_current_user)):
     user=await user_db.users.find_one({"_id":current_user["_id"]})
@@ -89,7 +99,7 @@ async def get_profile(user_db:AsyncIOMotorCollection =Depends(get_user_collectio
     return user
 
 #role:User ,Update profile
-@router.patch("/profile/update")
+@router.patch("/profile/update",dependencies=[Depends(auth_handler.requires_role("user"))])
 async def update_user(user:UpdateUser,user_db:AsyncIOMotorCollection =Depends(get_user_collection),
                 current_user:Dict[str,Any]=Depends(auth_handler.get_current_user)):
     update_data=user.dict(exclude_unset=True)
@@ -105,39 +115,4 @@ async def update_user(user:UpdateUser,user_db:AsyncIOMotorCollection =Depends(ge
         return JSONResponse(status_code=status.HTTP_304_NOT_MODIFIED,content="no updated values")
     return {"message":"profile updated"}
 
-#role:superadmin ,register new admin
-@router.post("/register-admin")
-async def create_admin(User: UserRequest,
-                       user_db: AsyncIOMotorCollection  = Depends(get_user_collection)):
-    # 1. Await the count_documents call
-    user_count = await user_db.users.count_documents({})
-    
-    if user_count == 0:
-        role = "superadmin"
-    else:
-        role = "admin"
-    
-    # 2. Await the find_one call
-    existing_user = await user_db.users.find_one({"email": User.email})
-    
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Admin with this email already exists."
-        )
-    
-    # 3. Hash the password
-    hashed_password = hash_password(User.password)
-    
-    user_data = {
-        "email": User.email,
-        "password": hashed_password,
-        "name": User.nme,  # Corrected key name
-        "role": role,
-        "created_at": datetime.now(timezone.utc)
-    }
-    
-    # 4. Insert the new user
-    await user_db.users.insert_one(user_data)
-    
-    return {"message": f"'{role}' created successfully."}
+
