@@ -28,7 +28,23 @@ async def verify_token(token, credential_exception):
         return sub, role
     except JWTError:
         raise credential_exception
-
+#get token payload
+def get_token_payload(token,credential_exception):
+    try:
+        payload=jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        raise credential_exception
+# role-checker dependency
+def requires_role(required_role: str):
+    def role_checker(payload: dict = Depends(get_token_payload)):
+        if payload.get("role") != required_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to access this resource"
+            )
+        return payload
+    return role_checker
 #   get current user from User Collection
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
