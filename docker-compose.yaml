@@ -7,6 +7,19 @@ services:
     volumes:
       - mongo_data:/data/db
 
+  booking_service:
+    build:
+      context: ./booking-services
+      dockerfile: Dockerfile
+    container_name: booking-services
+    ports:
+      - "8003:8000"
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      PAKRING_DB_NAME: PARKING_SERVICES_DB
+
   user_service:
     build:
       context: ./user-services

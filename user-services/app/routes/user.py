@@ -27,7 +27,7 @@ async def CreateUser(User: UserRequest,
     }
 
     # Insert into MongoDB
-    result =await user_db.users.insert_one(user_data)
+    result =await user_db.insert_one(user_data)
 
     # Prepare safe return data
     user_return = {
