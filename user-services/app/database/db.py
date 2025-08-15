@@ -22,6 +22,11 @@ def get_user_collection():
         raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")
     return database["users"]
 
+def get_admin_collection():
+    if database is None:
+        raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")
+    return database["users"]
+
 #def get_station_collection():
  #   if database is None:
   #      raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")

@@ -1,40 +1,66 @@
-from fastapi import APIRouter,status,Depends,HTTPException
-from pymongo.collection import Collection
-from datetime import datetime,timedelta
-from jose import jwt,JWTError
-from app.configs import ACCESS_TOKEN_EXPIRATION_TIME,SECRET_KEY,ALGORITHM
 from fastapi.security import OAuth2PasswordBearer
-from bson.objectid import ObjectId
-from app.database.db import get_user_collection
+from jose import jwt, JWTError
+from fastapi import Depends, HTTPException, status
+from app.configs import SECRET_KEY, ALGORITHM,ACCESS_TOKEN_EXPIRATION_TIME
+from app.database.db import get_user_collection, get_admin_collection
+from bson import ObjectId
+from datetime import datetime,timedelta
+from typing import Dict
 
-routers=APIRouter(prefix="/login",tags=["login"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")    
-#create users access tken
-async def create_access_token(data:dict):
-    to_encode=data.copy()
-    #calculate expiration time
-    expire=datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRATION_TIME)
 
-    to_encode.update({"exp":expire.timestamp()})
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+#   Create Access Token
+async def create_access_token(payload:Dict):
+    to_encode=payload.copy()
+    expire=datetime.utcnow()+timedelta(minutes=ACCESS_TOKEN_EXPIRATION_TIME)
+    to_encode.update({"exp":expire})
+    encoded_jwt=jwt.encode(to_encode,SECRET_KEY,ALGORITHM)
+    return encoded_jwt
 
-    encode_jwt=jwt.encode(to_encode,SECRET_KEY,algorithm=ALGORITHM)
-    return encode_jwt
-#verifying access token
-async def verify_token(token,credential_exception):
+#   Verify  Acces Token
+async def verify_token(token, credential_exception):
     try:
-        payload=jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
-        user_id=payload.get("_id")
-        if user_id is None:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        sub = payload.get("_id")
+        role = payload.get("role")  # store role in token during login
+        if sub is None or role is None:
             raise credential_exception
-        
+        return sub, role
     except JWTError:
         raise credential_exception
-    return user_id
 
+#   get current user from User Collection
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    user_db=Depends(get_user_collection),
+):
+    cred_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    sub, role = await verify_token(token, cred_exc)
+    if role != "user":
+        raise HTTPException(status_code=403, detail="User access only")
+    user = user_db.find_one({"_id": ObjectId(sub)})
+    if not user:
+        raise cred_exc
+    return {**user, "role": role}
 
-async def get_current_user(token:str=Depends(oauth2_scheme),user_db:Collection=Depends(get_user_collection)):
-    credential_exception=HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                       detail="COULD NOT VALIDATE CREDENTIALS",headers={"WWW-AUTHENTICATE":"BEARER"})
-    id,role=await verify_token(token,credential_exception)
-    user=user_db.find_one({"_id":ObjectId(str(id))},{"role":role})
-    return user
+#   get current admin from Admin Collection
+async def get_current_admin(
+    token: str = Depends(oauth2_scheme),
+    admin_db=Depends(get_admin_collection),
+):
+    cred_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    sub, role =await verify_token(token, cred_exc)
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access only")
+    admin = admin_db.find_one({"_id": ObjectId(sub)})
+    if not admin:
+        raise cred_exc
+    return {**admin, "role": role}

@@ -17,13 +17,17 @@ async def close_mongo_connection():
     if mongodb_client:
         mongodb_client.close()
         print("❌ MongoDB connection closed")
-        
+
+
 # Collection getters
 def get_user_collection():
     if user_database is None:
         raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")
     return user_database["users"]
-
+def get_admin_collection():
+    if user_database is None:
+        raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")
+    return user_database["users"]
 def get_station_collection():
     if parking_database is None:
         raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")

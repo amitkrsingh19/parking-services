@@ -1,45 +1,58 @@
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt,JWTError
-from fastapi import Depends,HTTPException,status
-from app.config import SECRET_KEY,ALGORITHM,ACCESS_TOKEN_EXPIRATION_TIME
-
+from jose import jwt, JWTError
+from fastapi import Depends, HTTPException, status
+from app.config import SECRET_KEY, ALGORITHM
+from app.database.db import get_user_collection, get_admin_collection
+from bson import ObjectId
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-#verifying token
-def verify_user_token(token,credential_exception):
+#    Verifying Access Token
+async def verify_token(token, credential_exception):
     try:
-        payload=jwt.decode(token,SECRET_KEY,ALGORITHM)
-        user_id=payload.get("_id")
-        if user_id is None:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        sub = payload.get("_id")
+        role = payload.get("role")  
+        if sub is None or role is None:
             raise credential_exception
-        
+        return sub, role
     except JWTError:
         raise credential_exception
-    return user_id
 
-#user access
-def get_current_user(token:str=Depends(oauth2_scheme)):
-    credential_exception=HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                       detail="COULD NOT VALIDATE CREDENTIALS",headers={"WWW-AUTHENTICATE":"BEARER"})
-    
-    return verify_user_token(token,credential_exception)
+#   Get Current User From Database
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    user_db=Depends(get_user_collection),
+):
+    cred_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    sub, role =await verify_token(token, cred_exc)
+    if role != "user":
+        raise HTTPException(status_code=403, detail="User access only")
 
-#verify admin token
-def verify_admin_token(token,credential_exception):
-    try:
-        payload=jwt.decode(token,SECRET_KEY,ALGORITHM)
-        admin_id=payload.get("_id")
-        if admin_id is None:
-            raise credential_exception
-        
-    except JWTError:
-        raise credential_exception
-    return admin_id
+    user = await user_db.find_one({"_id": ObjectId(sub)})
+    if not user:
+        raise cred_exc
 
-#admin access
-def get_current_admin(token:str=Depends(oauth2_scheme)):
-        credential_exception=HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                       detail="COULD NOT VALIDATE CREDENTIALS",
-                                       headers={"WWW-AUTHENTICATE":"BEARER"})
-        return verify_admin_token(token,credential_exception)
+    return {**user, "role": role}
+
+#   Get Current Admin from Database
+async def get_current_admin(
+    token: str = Depends(oauth2_scheme),
+    admin_db=Depends(get_admin_collection),
+):
+    cred_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    sub, role = await verify_token(token, cred_exc)
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access only")
+    admin = await admin_db.find_one({"_id": ObjectId(sub)})
+    if not admin:
+        raise cred_exc
+    return {**admin, "role": role}
