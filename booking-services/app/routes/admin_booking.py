@@ -36,7 +36,7 @@ async def get_booking(
 @router.get("/dashboard")
 async def get_dashboard(
     booking_db: AsyncIOMotorCollection = Depends(db.get_booking_collection),
-    slot_db: AsyncIOMotorCollection = Depends(db.get_slot_collection),
+    slot_db: AsyncIOMotorCollection = Depends(db.get_booking_collection),
     current_user: str = Depends(auth_utils.get_current_user),
     station_db: AsyncIOMotorCollection = Depends(db.get_station_collection)
 ):

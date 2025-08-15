@@ -1,29 +1,40 @@
-from pymongo import MongoClient
-from pymongo.collection import Collection
-from app.config import PARKING_DB_NAME,USER_DB_NAME,get_mongo_uri
 from motor.motor_asyncio import AsyncIOMotorClient
+from app.config import MONGO_URI, USER_DB_NAME,PARKING_DB_NAME
 
+mongodb_client: AsyncIOMotorClient | None = None
+user_database = None
+parking_database=None
 
-# Mongo client
-client = AsyncIOMotorClient("localhost",27017)
+async def connect_to_mongo():
+    global mongodb_client, database
+    mongodb_client = AsyncIOMotorClient(MONGO_URI)
+    user_database = mongodb_client[USER_DB_NAME]
+    parking_database=mongodb_client[PARKING_DB_NAME]
+    print(f"✅ Connected to MongoDB @ {MONGO_URI}")
 
-if not PARKING_DB_NAME or not USER_DB_NAME:
-    raise RuntimeError("PARKING_SERVICES_DB and USER_SERVICES_DB must be set")
+async def close_mongo_connection():
+    global mongodb_client
+    if mongodb_client:
+        mongodb_client.close()
+        print("❌ MongoDB connection closed")
+        
+# Collection getters
+def get_user_collection():
+    if user_database is None:
+        raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")
+    return user_database["users"]
 
+def get_station_collection():
+    if parking_database is None:
+        raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")
+    return parking_database["parking_stations"]
 
-# Access DBs
-parking_db = client[PARKING_DB_NAME]
-user_db = client[USER_DB_NAME]
+def get_parking_collection():
+    if parking_database is None:
+        raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")
+    return parking_database["parking_slots"]
 
-# parking-slot Collections
-async def get_slot_collection():
-    return parking_db["parking_slots"]
-#booking-slot colletions
-async def get_booking_collection():
-    return parking_db["parking_bookings"]
-#get station collection
-async def get_station_collection():
-    return parking_db["parking_stations"]
-#user collection
-async def get_user_collection():
-    return user_db["users"]
+def get_booking_collection():
+    if parking_database is None:
+        raise RuntimeError("Database connection not initialized. Call connect_to_mongo() first.")
+    return parking_database["parking_bookings"]

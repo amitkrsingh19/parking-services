@@ -1,12 +1,12 @@
 from fastapi import APIRouter,Depends,HTTPException,status
 from pymongo.collection import Collection
-from ..database import db
-from ..models import schemas
+from app.database import db
+from app.models import schemas
 from motor.motor_asyncio import AsyncIOMotorCollection
 from bson.objectid import ObjectId
 from fastapi.responses import JSONResponse
 from datetime import datetime,timedelta
-from ..auth_utils import get_current_user,get_current_admin
+from app.auth_utils import get_current_user,get_current_admin
 
 router=APIRouter(prefix="/bookings",
                   tags=["bookings"])
@@ -17,7 +17,7 @@ async def book_slot(
     booking: schemas.BookSlot,
     current_user: dict = Depends(get_current_user),
     booking_db: AsyncIOMotorCollection = Depends(db.get_booking_collection),
-    slot_db: AsyncIOMotorCollection = Depends(db.get_slot_collection)
+    slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection)
 ):
     # Extract user_id from authenticated user
     user_id = current_user
@@ -148,7 +148,7 @@ async def cancel_booking(
     booking_id: str,
     booking_db: Collection = Depends(db.get_booking_collection),
     current_user: str = Depends(get_current_user),
-    slot_db: Collection = Depends(db.get_slot_collection)
+    slot_db: Collection = Depends(db.get_parking_collection)
 ):
     try:
         obj = ObjectId(booking_id)
