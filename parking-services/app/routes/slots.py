@@ -35,11 +35,20 @@ async def create_slot(
         return slot_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+#get slot for users
+@router.get("/")
+async def fetch_slot(skip:int=0,limit:int=0,slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
+               current_user:str=Depends(auth_utils.get_current_user)):
+    slots_cursor= slot_db.find({"is_available":"True"})
+    available_slot=[]
+    async for doc in slots_cursor:
+        available_slot.append(doc)
+    return available_slot
+     
 # Get  Slot By ID for users
 @router.get("/{id}", response_model=schemas.SlotOut)
-async def get_slot(id:str, slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection)):
-
+async def get_slot(id:str, slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
+                   current_user:str=Depends(auth_utils.get_current_user)):
     result = await slot_db.find_one({"slot_id":id})
     if not result:
         raise HTTPException(status_code=404, detail="Slot not found")
