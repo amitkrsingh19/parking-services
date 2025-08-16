@@ -3,7 +3,7 @@ from app.dependencies import requires_role
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from httpx import AsyncClient
-from config import SECRET_KEY,ALGORITHM
+from app.config import SECRET_KEY,ALGORITHM
 from jose import jwt,JWTError
 from httpx import AsyncClient
 
