@@ -6,27 +6,27 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from bson.objectid import ObjectId
 from fastapi.responses import JSONResponse
 from datetime import datetime,timedelta
-from app.auth_utils import get_current_user,get_current_admin
+from app.dependencies import auth
 
 router=APIRouter(prefix="/bookings",
                   tags=["bookings"])
 
-#book a slot 
-@router.post("/",response_model=schemas.Bookedslot)
+#book a slot ,Role:user
+@router.post("/",dependencies=[Depends(auth.requires_role("user"))],response_model=schemas.Bookedslot)
 async def book_slot(
     booking: schemas.BookSlot,
-    current_user: dict = Depends(get_current_user),
+    payload: dict = Depends(auth.get_token_payload),
     booking_db: AsyncIOMotorCollection = Depends(db.get_booking_collection),
     slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection)
 ):
-    # Extract user_id from authenticated user
-    user_id = current_user
+    # Extract user_id from Payload
+    user_id = payload.get("sub")
 
     # Define time range
     start_time = datetime.utcnow()
     end_time = start_time + timedelta(hours=booking.duration)
 
-        #check for conflict,if any:
+    #check for conflict,if any:
     conflict = booking_db.find_one({
     "station_id": booking.station_id,
     "slot_id": booking.slot_id,
@@ -64,14 +64,15 @@ async def book_slot(
     return new_booking
 
 #user booking history
-@router.get("/history")
+@router.get("/history",dependencies=[Depends(auth.requires_role("user"))])
 async def user_bookings(
     booking_db: AsyncIOMotorCollection= Depends(db.get_booking_collection),
-    current_user: str = Depends(get_current_user),
+    payload :dict = Depends(auth.get_token_payload),
 ):
     try:
+        user_id=payload.get("sub")
         # Find all bookings for the current user
-        book_cursor= booking_db.find({"user_id": current_user}).sort("start_time", -1)
+        book_cursor= booking_db.find({"user_id": user_id}).sort("start_time", -1)
         booked = []
 
         async for doc in book_cursor:
@@ -90,13 +91,13 @@ async def user_bookings(
         )
 
 #user booking dashboard
-@router.get("/user/dashboard", response_model=schemas.UserDashboard)
+@router.get("/user/dashboard",dependencies=[Depends(auth.requires_role("user"))],response_model=schemas.UserDashboard)
 async def user_dashboard(
-    current_user: dict = Depends(get_current_user),
+    payload : dict = Depends(auth.get_token_payload),
     booking_db: Collection = Depends(db.get_booking_collection)
 ):
     try:
-        user_id =current_user
+        user_id =payload.get("sub")
         # Ensure ObjectId type
         now = datetime.utcnow()
 
@@ -147,10 +148,11 @@ async def user_dashboard(
 async def cancel_booking(
     booking_id: str,
     booking_db: Collection = Depends(db.get_booking_collection),
-    current_user: str = Depends(get_current_user),
+    payload: dict = Depends(auth.get_token_payload),
     slot_db: Collection = Depends(db.get_parking_collection)
 ):
     try:
+        user_id=payload.get("sub")
         obj = ObjectId(booking_id)
 
         # Step 1: Find and delete the booking
@@ -184,7 +186,4 @@ async def cancel_booking(
             content={"error": str(e)}
         )
 
-@router.get("/")
-def get_booking(charging_support:bool,booking_db:Collection=Depends(db.get_booking_collection),
-                current_user:str=Depends(get_current_user)):
-    booking_db.find({""})
+

@@ -2,20 +2,23 @@ from fastapi import APIRouter,Depends,HTTPException,status
 from motor.motor_asyncio import AsyncIOMotorCollection
 from app.database import db
 from app.models import schemas
-from app import auth_utils
+from app.dependencies import auth
 from datetime import datetime,timedelta
+
 
 router=APIRouter(prefix="/bookings/admin",tags=["admin booking"])
 
 #admin get their booking of slots they posted
-@router.get("/")
+@router.get("/",dependencies=[Depends(auth.requires_role("superadmin" or "admin"))])
 async def get_booking(
     booking_db: AsyncIOMotorCollection = Depends(db.get_booking_collection),
-    current_user: str = Depends(auth_utils.get_current_user),
+    payload : dict = Depends(auth.get_token_payload),
     station_db: AsyncIOMotorCollection = Depends(db.get_station_collection)
 ):
+    #   Get user ID from payload
+    user_id=payload.get("sub")
     # Find admin's station
-    admin_station = await station_db.find_one({"posted_by": current_user})
+    admin_station = await station_db.find_one({"posted_by":user_id})
     if not admin_station:
         raise HTTPException(
             status_code=status.HTTP_204_NO_CONTENT,
@@ -33,17 +36,17 @@ async def get_booking(
     return bookings
 
 #admin dashboard
-@router.get("/dashboard")
+@router.get("/dashboard",dependencies=[Depends(auth.requires_role("admin"))])
 async def get_dashboard(
     booking_db: AsyncIOMotorCollection = Depends(db.get_booking_collection),
     slot_db: AsyncIOMotorCollection = Depends(db.get_booking_collection),
-    current_user: str = Depends(auth_utils.get_current_user),
+    payload : dict = Depends(auth.get_token_payload),
     station_db: AsyncIOMotorCollection = Depends(db.get_station_collection)
 ):
     now = datetime.utcnow()
-
+    user_id=payload.get("sub")
     # Get admin's station
-    admin_station = await station_db.find_one({"posted_by": current_user})
+    admin_station = await station_db.find_one({"posted_by": user_id})
     if not admin_station:
         raise HTTPException(status_code=404, detail="No station found")
 
