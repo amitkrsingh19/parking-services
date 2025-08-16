@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import user, login  # or user_login depending on your file names
+from app.routes import user, login,admin  # or user_login depending on your file names
 from app.database import db
 
 app = FastAPI(version="1.0.0")
@@ -14,6 +14,7 @@ async def shutdown_db_client():
 
 app.include_router(user.router)
 app.include_router(login.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def read_root():

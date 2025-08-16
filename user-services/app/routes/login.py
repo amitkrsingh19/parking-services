@@ -10,7 +10,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 router=APIRouter(prefix="/login",tags=["login"])
 
 #user login
-@router.post("/-users")
+@router.post("/users")
 async def login_user(user_credentials: OAuth2PasswordRequestForm = Depends(),
                user_db:AsyncIOMotorCollection = Depends(db.get_user_collection)):
 
@@ -37,12 +37,12 @@ async def login_user(user_credentials: OAuth2PasswordRequestForm = Depends(),
     }
     
     # Create the access token
-    access_token = await auth_handler.create_access_token(payload)
+    access_token =auth_handler.create_access_token(payload)
 
     return {"access_token": access_token, "token_type": "bearer"}
 
 # Admin Login
-@router.post("/-admin")
+@router.post("/admin")
 async def login_admin(admin_credentials: OAuth2PasswordRequestForm = Depends(),
                admin_db:AsyncIOMotorCollection = Depends(db.get_admin_collection)):
 
@@ -70,6 +70,6 @@ async def login_admin(admin_credentials: OAuth2PasswordRequestForm = Depends(),
     }
     
     # Create the access token
-    access_token = await auth_handler.create_access_token(payload)
+    access_token =auth_handler.create_access_token(payload)
 
     return {"access_token": access_token, "token_type": "bearer"}

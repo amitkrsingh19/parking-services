@@ -43,9 +43,9 @@ async def CreateUser(User: UserRequest,
 
 #Delete current User
 #Role:  User
-@router.delete("/",dependencies=[Depends(auth_handler.requires_role("user"))])
+@router.delete("/",dependencies=[Depends(auth_handler.requires_role("superadmin" or "user"))])
 async def delete_user(payload:dict=Depends(auth_handler.get_token_payload),
-                user_db:AsyncIOMotorCollection=Depends(auth_handler.get_user_collection)):
+                user_db:AsyncIOMotorCollection=Depends(get_user_collection)):
     #check for the user exists in database
     user_id_from_token=payload.get("sub")
            # Check if a user ID was found in the token
@@ -71,8 +71,9 @@ async def delete_user(payload:dict=Depends(auth_handler.get_token_payload),
 #Role:User, profile
 @router.get("/profile/me",dependencies=[Depends(auth_handler.requires_role("user"))])
 async def get_profile(user_db:AsyncIOMotorCollection =Depends(get_user_collection),
-                current_user:Dict[str, Any]=Depends(auth_handler.get_current_user)):
-    user=await user_db.users.find_one({"_id":current_user["_id"]})
+                current_user:Dict[str, Any]=Depends(auth_handler.get_token_payload)):
+    user_id=current_user.get("sub")
+    user=await user_db.find_one({"_id":user_id})
     if not user:
         return JSONResponse(status_code=status.HTTP_403_FORBIDDEN,content="user not found")
     user["_id"] = str(user["_id"])
@@ -81,14 +82,15 @@ async def get_profile(user_db:AsyncIOMotorCollection =Depends(get_user_collectio
 
 #role:User ,Update profile
 @router.patch("/profile/update",dependencies=[Depends(auth_handler.requires_role("user"))])
-async def update_user(user:UpdateUser,user_db:AsyncIOMotorCollection =Depends(get_user_collection),
-                current_user:Dict[str,Any]=Depends(auth_handler.get_current_user)):
+async def update_user(user:UpdateUser,
+                      user_db:AsyncIOMotorCollection =Depends(get_user_collection),
+                current_user:dict=Depends(auth_handler.get_token_payload)):
     update_data=user.dict(exclude_unset=True)
-
+    user_id=current_user.get("sub")
     if "password" in update_data:
         update_data["password"]=hash_password(update_data["password"])
     result=await user_db.users.update_one(
-        {'_id':ObjectId(current_user["_id"])},
+        {'_id':ObjectId(user_id)},
         {'$set':update_data}
     )
 

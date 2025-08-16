@@ -2,17 +2,16 @@ from fastapi import status, Depends,APIRouter,HTTPException
 from fastapi.responses import JSONResponse
 from app.models.schemas import UserRequest,UpdateUser
 from app.dependencies.utils import hash_password
-from app.database.db import get_admin_collection
+from app.database.db import get_admin_collection,get_user_collection
 from app.dependencies import auth_handler
 from datetime import datetime, timezone
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorCollection 
 
-router=APIRouter(prefix="/users",tags=["users"])
+router=APIRouter(prefix="/users",tags=["admin"])
 
 #   role:superadmin ,register new admin
-@router.post("/register-admin",
-             dependencies=[Depends(auth_handler.requires_role("superadmin"or"admin"))])
+@router.post("/register-admin")
 async def create_admin(admin: UserRequest,
                        admin_db: AsyncIOMotorCollection = Depends(get_admin_collection)):
     #  Await the count_documents call
@@ -52,7 +51,7 @@ async def create_admin(admin: UserRequest,
 #   Role:super admin
 @router.get("/",dependencies=[Depends(auth_handler.requires_role("superadmin"))])
 async def get_users(skip: int = 0, limit: int = 10,
-                    user_db: AsyncIOMotorCollection  = Depends(auth_handler.get_user_collection)):
+                    user_db: AsyncIOMotorCollection  = Depends(get_user_collection)):
     users_cursor = user_db.users.find({}, {"password": 0}).limit(limit).skip(skip)  # exclude password
     users_list = []
     async for user_doc in users_cursor:
@@ -69,7 +68,7 @@ async def get_users(skip: int = 0, limit: int = 10,
 #   Role:superadmin,get user by id
 @router.get("/{user_id}",dependencies=[Depends(auth_handler.requires_role("superadmin"))])
 async def get_user(user_id:str,
-                   user_db:AsyncIOMotorCollection =Depends(auth_handler.get_user_collection)):
+                   user_db:AsyncIOMotorCollection =Depends(get_user_collection)):
     try:
         user =await user_db.users.find_one({"_id": ObjectId(user_id)})
         if not user:
@@ -89,7 +88,7 @@ async def get_user(user_id:str,
 #   Role: Super Admin
 @router.delete("/",dependencies=[Depends(auth_handler.requires_role("superadmin"or"admin"))])
 async def delete_user(payload:dict=Depends(auth_handler.get_token_payload),
-                admin_db:AsyncIOMotorCollection=Depends(auth_handler.get_admin_collection)):
+                admin_db:AsyncIOMotorCollection=Depends(get_admin_collection)):
     #check for the user exists in database
     user_id_from_token=payload.get("sub")
            # Check if a user ID was found in the token
@@ -115,12 +114,13 @@ async def delete_user(payload:dict=Depends(auth_handler.get_token_payload),
 #delete admin from database
 #   Role: Superadmin
 @router.delete("/{id}",dependencies=[Depends(auth_handler.requires_role("superadmin"))])
-async def del_admin(current_admin:str=Depends(auth_handler.get_current_admin),
+async def del_admin(current_admin:dict=Depends(auth_handler.get_token_payload),
                     admin_db:AsyncIOMotorCollection = Depends(get_admin_collection)):
     #check for admin in database
-    admin= await admin_db.find_one({"_id":current_admin})
+    admin_id=current_admin.get("sub")
+    admin= await admin_db.find_one({"_id":admin_id})
     if admin:
-        await admin_db.delete_one({"_id":current_admin})
+        await admin_db.delete_one({"_id":admin_id})
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT,
                             content="admin deleted from database")
     else:
