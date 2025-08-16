@@ -10,7 +10,7 @@ router=APIRouter(prefix="/slots",
 
 # create a slot by admin 
 # to create a slot admin must have a station
-@router.post("/")
+@router.post("/",dependencies=[Depends(auth_utils.requires_role("superadmin" or "admin"))])
 async def create_slot(
     slot: schemas.SlotCreate,
     slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
@@ -38,7 +38,7 @@ async def create_slot(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 #get slot for users
-@router.get("/")
+@router.get("/",dependencies=[Depends(auth_utils.requires_role("user"))])
 async def fetch_slot(skip:int=0,limit:int=0,slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
                payload:str=Depends(auth_utils.get_token_payload)):
     slots_cursor= slot_db.find({"is_available":"True"})
@@ -48,7 +48,8 @@ async def fetch_slot(skip:int=0,limit:int=0,slot_db: AsyncIOMotorCollection = De
     return available_slot
      
 # Get  Slot By ID for users
-@router.get("/{id}", response_model=schemas.SlotOut)
+@router.get("/{id}", dependencies=[Depends(auth_utils.requires_role("user"))],
+            response_model=schemas.SlotOut)
 async def get_slot(id:str, slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
                    payload:str=Depends(auth_utils.get_token_payload)):
     result = await slot_db.find_one({"slot_id":id})
@@ -65,7 +66,7 @@ async def get_slot(id:str, slot_db: AsyncIOMotorCollection = Depends(db.get_park
     return schemas.SlotOut(**slot_response)
 
 #get all the posted slots for admin
-@router.get("/-admin")
+@router.get("/-admin",dependencies=[Depends(auth_utils.requires_role("superadmin"))])
 async def get_slots(slot_db:AsyncIOMotorCollection=Depends(db.get_parking_collection),
                     payload:dict=Depends(auth_utils.get_token_payload)):
     #get user_id from payload
