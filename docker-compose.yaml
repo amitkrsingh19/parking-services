@@ -7,7 +7,7 @@ services:
     volumes:
       - mongo_data:/data/db
 
-  booking_service:
+  booking_services:
     build:
       context: ./booking-services
       dockerfile: Dockerfile
@@ -20,13 +20,13 @@ services:
       MONGO_URI: mongodb://mongo:27017
       PAKRING_DB_NAME: PARKING_SERVICES_DB
 
-  user_service:
+  user_services:
     build:
       context: ./user-services
       dockerfile: Dockerfile
     container_name: user-services
     ports:
-      - "8001:8000"
+      - "8002:8000"    
     depends_on:
       - mongo
     environment:
@@ -39,12 +39,23 @@ services:
       dockerfile: Dockerfile
     container_name: parking-services
     ports:
-      - "8002:8000"
+      - "8001:8000"
     depends_on:
       - mongo
     environment:
       MONGO_URI: mongodb://mongo:27017
       PARKING_DB_NAME: parking_services_db
+  gateway-services:
+    build: 
+      context: ./gateway-api
+      dockerfile: Dockerfile
+    container_name: gateway-services
+    ports:
+      - "8000:8000"  # Expose the gateway to your host machine
+    depends_on:
+      - user_services
+      - parking_services
+      - booking_services
 
 volumes:
   mongo_data:
