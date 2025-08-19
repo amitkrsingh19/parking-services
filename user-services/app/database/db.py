@@ -1,14 +1,14 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.configs import MONGO_URI, USER_DB_NAME
+from app.configs import settings
 
 mongodb_client: AsyncIOMotorClient | None = None
 database = None
 
 async def connect_to_mongo():
     global mongodb_client, database
-    mongodb_client = AsyncIOMotorClient(MONGO_URI)
-    database = mongodb_client[USER_DB_NAME]
-    print(f"✅ Connected to MongoDB @ {MONGO_URI}")
+    mongodb_client = AsyncIOMotorClient(settings.MONGO_URI)
+    database = mongodb_client[settings.USER_DB_NAME]
+    print(f"✅ Connected to MongoDB @ {settings.MONGO_URI}")
 
 async def close_mongo_connection():
     global mongodb_client
