@@ -1,13 +1,6 @@
-# config.py
-import os
-from dotenv import load_dotenv
 import socket
-load_dotenv()
+from pydantic_settings import BaseSettings
 
-# JWT Settings
-SECRET_KEY = os.getenv("SECRET_KEY","SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRATION_TIME = int(os.getenv("ACCESS_TOKEN_EXPIRATION_TIME", "30"))  # minutes
 
 async def get_mongo_uri():
     try:
@@ -16,7 +9,17 @@ async def get_mongo_uri():
     except socket.error:
         return "mongodb://localhost:27017"
     
+class settings(BaseSettings):
+    MONGO_URI:str
+    USER_DB_NAME:str
+    PARKING_DB_NAME:str
+    SECRET_KEY:str
+    ALGORITHM:str
+    ACCESS_TOKEN_EXPIRATION_TIME:int 
+
+    class config:
+        env_file=".env"
 # MongoDB Settings
-MONGO_URI = f"mongodb://{os.getenv('MONGO_HOST')}:{os.getenv('MONGO_PORT')}"
-USER_DB_NAME = os.getenv('USER_DB_NAME','user_services_db')
-PARKING_DB_NAME = os.getenv('PARKING_DB_NAME','PARKING_SERVICES_DB')
+#MONGO_URI = f"mongodb://{os.getenv('MONGO_HOST')}:{os.getenv('MONGO_PORT')}"
+#USER_DB_NAME = os.getenv('USER_DB_NAME','user_services_db')
+#PARKING_DB_NAME = os.getenv('PARKING_DB_NAME','PARKING_SERVICES_DB')
