@@ -1,5 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.config import MONGO_URI, USER_DB_NAME,PARKING_DB_NAME
+from app.config import settings
 
 mongodb_client: AsyncIOMotorClient | None = None
 user_database = None
@@ -7,10 +7,10 @@ parking_database=None
 
 async def connect_to_mongo():
     global mongodb_client, database
-    mongodb_client = AsyncIOMotorClient(MONGO_URI)
-    user_database = mongodb_client[USER_DB_NAME]
-    parking_database=mongodb_client[PARKING_DB_NAME]
-    print(f"✅ Connected to MongoDB @ {MONGO_URI}")
+    mongodb_client = AsyncIOMotorClient(settings.MONGO_URI)
+    user_database = mongodb_client[settings.USER_DB_NAME]
+    parking_database=mongodb_client[settings.PARKING_DB_NAME]
+    print(f"✅ Connected to MongoDB @ {settings.MONGO_URI}")
 
 async def close_mongo_connection():
     global mongodb_client

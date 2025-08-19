@@ -1,9 +1,8 @@
 from fastapi import APIRouter,Depends,HTTPException,status
 from motor.motor_asyncio import AsyncIOMotorCollection
 from app.database import db
-from app.models import schemas
 from app.dependencies import auth
-from datetime import datetime,timedelta
+from datetime import datetime
 
 
 router=APIRouter(prefix="/bookings/admin",tags=["admin booking"])
