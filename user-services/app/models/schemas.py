@@ -5,7 +5,7 @@ from pydantic import EmailStr
 
 #request schemas for user
 class UserRequest(BaseModel):
-    email:str
+    email:EmailStr
     password:str
     nme:str
 

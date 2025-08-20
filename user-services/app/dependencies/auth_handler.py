@@ -1,19 +1,19 @@
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from fastapi import Depends, HTTPException, status
-from app.configs import SECRET_KEY, ALGORITHM,ACCESS_TOKEN_EXPIRATION_TIME
-from bson import ObjectId
+from app.configs import settings
 from datetime import datetime,timedelta
 from typing import Dict,Any
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/")
+
 #   Create Access Token
 def create_access_token(data:Dict[str,Any])->str:
     to_encode=data.copy()
-    expire=datetime.utcnow()+timedelta(minutes=ACCESS_TOKEN_EXPIRATION_TIME)
+    expire=datetime.utcnow()+timedelta(minutes=settings.ACCESS_TOKEN_EXPIRATION_TIME)
     to_encode.update({"exp":expire})
-    encoded_jwt=jwt.encode(to_encode,SECRET_KEY,ALGORITHM)
+    encoded_jwt=jwt.encode(to_encode,settings.SECRET_KEY,settings.ALGORITHM)
     return encoded_jwt
 
 #get token payload
@@ -23,7 +23,7 @@ def get_token_payload(token:str=Depends(oauth2_scheme))->Dict[str,Any]:
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},)
     try:
-        payload=jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
+        payload=jwt.decode(token,settings.SECRET_KEY,algorithms=[settings.ALGORITHM])
         return payload
     except JWTError:
         raise credential_exception

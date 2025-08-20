@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from app.routes import user, login,admin  # or user_login depending on your file names
-from app.database import db
+from .routes import user,login,admin 
+from .database import db
 
 app = FastAPI(version="1.0.0")
 

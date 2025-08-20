@@ -1,6 +1,6 @@
 #utitly function
 from passlib.context import CryptContext
-
+from app.configs import settings
 
 #telling passlib about hashing method which is bcrypt
 pwd_context=CryptContext(schemes=["bcrypt"],deprecated="auto")
