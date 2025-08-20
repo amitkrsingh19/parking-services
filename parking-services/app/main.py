@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from .routes import slots,station
-from .database import db
+from app.routes import slots,station
+from app.database import db
 app=FastAPI()
 
 @app.get("/")

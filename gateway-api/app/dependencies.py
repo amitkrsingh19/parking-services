@@ -1,7 +1,7 @@
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt,JWTError
 from fastapi import Depends,HTTPException,status
-from app.config import ACCESS_TOKEN_EXPIRATION_TIME,SECRET_KEY,ALGORITHM
+from app.config import settings
 from typing import Dict,Any
 
 
@@ -14,7 +14,7 @@ def get_token_payload(token:str=Depends(oauth2_scheme))->Dict[str,Any]:
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},)
     try:
-        payload=jwt.decode(token,SECRET_KEY,algorithms=ALGORITHM)
+        payload=jwt.decode(token,settings.SECRET_KEY,algorithms=settings.ALGORITHM)
         return payload
     except JWTError:
         raise credential_exception

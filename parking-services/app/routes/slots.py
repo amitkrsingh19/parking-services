@@ -10,7 +10,7 @@ router=APIRouter(prefix="/slots",
 
 # create a slot by admin 
 # to create a slot admin must have a station
-@router.post("/",dependencies=[Depends(auth_utils.requires_role("superadmin" or "admin"))])
+@router.post("/",dependencies=[Depends(auth_utils.requires_role("admin"))])
 async def create_slot(
     slot: schemas.SlotCreate,
     slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),

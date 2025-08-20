@@ -3,7 +3,7 @@ from app.dependencies import requires_role
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from httpx import AsyncClient
-from app.config import SECRET_KEY,ALGORITHM
+from app.config import settings
 from jose import jwt,JWTError
 from httpx import AsyncClient
 
@@ -25,7 +25,7 @@ async def get_current_user_payload(token: str = Depends(oauth2_scheme)):
     # The gateway's logic to decode and validate the token
     # This is a critical step to prevent forwarding unauthenticated requests
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") 

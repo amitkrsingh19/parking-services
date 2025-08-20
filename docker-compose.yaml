@@ -17,8 +17,9 @@ services:
     depends_on:
       - mongo
     environment:
-      MONGO_URI: mongodb://mongo:27017
-      PAKRING_DB_NAME: PARKING_SERVICES_DB
+      - MONGO_URI=mongodb://host.docker.internal:27017
+      - USER_SERVICES_DB=user_services_db
+      - PARKING_SERVICES_DB=PARKING_SERVICES_DB
 
   user_services:
     build:
@@ -26,12 +27,12 @@ services:
       dockerfile: Dockerfile
     container_name: user-services
     ports:
-      - "8002:8000"    
+      - "8002:8000"
     depends_on:
       - mongo
     environment:
-      MONGO_URI: mongodb://mongo:27017
-      USER_DB_NAME: user_services_db
+      - MONGO_URI=mongodb://host.docker.internal:27017
+      - USER_SERVICES_DB=user_services_db
 
   parking_services:
     build:
@@ -42,9 +43,6 @@ services:
       - "8001:8000"
     depends_on:
       - mongo
-    environment:
-      MONGO_URI: mongodb://mongo:27017
-      PARKING_DB_NAME: parking_services_db
   gateway-services:
     build: 
       context: ./gateway-api
