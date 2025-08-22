@@ -1,7 +1,32 @@
+#   -----RELATIONAL DATABASE-------
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from app.configs import settings
+
+# -----POSTGRE SQL database------------
+SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.DB_USERNAME}:{settings.DB_PASSWORD}@{settings.DB_HOSTNAME}:{settings.DB_PORT}/{settings.DB_NAME}"
+
+engine=create_engine(SQLALCHEMY_DATABASE_URL,echo=True)
+
+SessionLocal=sessionmaker(autocommit=False,autoflush=False,bind=engine)
+
+Base = declarative_base()
+
+#dependencies
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+#   ---- Non Relational Database (Mongodb)
+"""
+
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.configs import settings
 from typing import Optional
-
 # Global variables with type hints
 mongodb_client: Optional[AsyncIOMotorClient] = None
 user_db = None
@@ -37,3 +62,5 @@ def get_admin_collection():
     if user_db is None:
         raise RuntimeError("User database not initialized. Call connect_to_mongo() first.")
     return user_db.get_collection("admins")
+
+"""

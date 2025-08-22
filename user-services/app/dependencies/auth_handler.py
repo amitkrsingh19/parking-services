@@ -13,7 +13,12 @@ def create_access_token(data:Dict[str,Any])->str:
     to_encode=data.copy()
     expire=datetime.utcnow()+timedelta(minutes=settings.ACCESS_TOKEN_EXPIRATION_TIME)
     to_encode.update({"exp":expire})
-    encoded_jwt=jwt.encode(to_encode,settings.SECRET_KEY,settings.ALGORITHM)
+    #Convert Enum to Json serializable
+    for k, v in to_encode.items():
+        if hasattr(v, "value"):  # If Enum
+            to_encode[k] = v.value
+
+    encoded_jwt=jwt.encode(to_encode,settings.SECRET_KEY,settings.ALGORITHMS)
     return encoded_jwt
 
 #get token payload
@@ -23,7 +28,7 @@ def get_token_payload(token:str=Depends(oauth2_scheme))->Dict[str,Any]:
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},)
     try:
-        payload=jwt.decode(token,settings.SECRET_KEY,algorithms=[settings.ALGORITHM])
+        payload=jwt.decode(token,settings.SECRET_KEY,algorithms=[settings.ALGORITHMS])
         return payload
     except JWTError:
         raise credential_exception
