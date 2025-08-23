@@ -5,7 +5,7 @@ from app.config import settings
 from typing import Dict,Any
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://localhost:8000/login/")
 #get token payload
 def get_token_payload(token:str=Depends(oauth2_scheme))->Dict[str,Any]:
     credential_exception = HTTPException(

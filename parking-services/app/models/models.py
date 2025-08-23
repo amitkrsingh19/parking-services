@@ -1,16 +1,16 @@
-from sqlalchemy import Column,Integer,String,ForeignKey,DateTime,Boolean,Enum
+from sqlalchemy import Column,Integer,String,ForeignKey,DateTime,DECIMAL,Enum
 from sqlalchemy.orm import relationship
 from datetime import datetime       
 import enum
 from app.database.db import Base
 
 #  --------ENUMS---------
-class SlotStatus(enum.Enum):
+class SlotStatus(str,enum.Enum):
     available="available"
     booked="booked"
     cancelled="cancelled"
 
-class SlotType(enum.Enum):
+class SlotType(str,enum.Enum):
     car="car"
     bike="bike"
     ev="ev"
@@ -27,6 +27,8 @@ class Parking(Base):
     created_at=Column(DateTime,default=datetime.utcnow)
     admin_id=Column(Integer,nullable=False)
 
+    # One station → many slots
+    slots = relationship("Slot", back_populates="station", cascade="all, delete-orphan")
 
 # ---SLOT TABLE---
 class Slot(Base):
@@ -37,7 +39,27 @@ class Slot(Base):
     slot_number= Column(String,nullable=False)
     slot_type=Column(Enum(SlotType))
     status = Column(Enum(SlotStatus), default=SlotStatus.available)
+    price_per_hour=Column(Integer,nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     admin_id = Column(Integer, nullable=False)
 
+    # Relationship to station
     station = relationship("Parking", back_populates="slots")
+
+    # One slot → many bookings
+    bookings = relationship("Booking", back_populates="slot", cascade="all, delete-orphan")
+
+# ---SLOT TABLE---
+class Booking(Base):
+    __tablename__ = "bookings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer,nullable=False)
+    slot_id = Column(Integer, ForeignKey("slots.id", ondelete="CASCADE"), nullable=False)
+    start_time=Column(DateTime,default=datetime.utcnow)
+    end_time=Column(DateTime,nullable=False)
+    status = Column(Enum(SlotStatus), default=SlotStatus.booked)
+    price=Column(DECIMAL)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    slot=relationship("Slot",back_populates="bookinngs")
