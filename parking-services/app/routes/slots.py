@@ -1,80 +1,86 @@
-from fastapi import APIRouter,Depends,HTTPException,status
-from ..models import schemas
-from ..database import db
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from app.models import schemas, models
+from app.database import db 
 from app.dependencies import auth_utils
 from fastapi.responses import JSONResponse
-from motor.motor_asyncio import AsyncIOMotorCollection
 
-router=APIRouter(prefix="/slots",
-                 tags=["slots"])
+router = APIRouter(
+    prefix="/slots",
+    tags=["slots"]
+)
 
-# create a slot by admin 
-# to create a slot admin must have a station
-@router.post("/",dependencies=[Depends(auth_utils.requires_role("admin"))])
-async def create_slot(
+# ------------------------
+# CREATE SLOT (ADMIN ONLY)
+# ------------------------
+@router.post("/",response_model=schemas.SlotOut)
+def create_slot(
     slot: schemas.SlotCreate,
-    slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
-    station_db: AsyncIOMotorCollection = Depends(db.get_station_collection),
-    payload:dict=Depends(auth_utils.get_token_payload)
+    db: Session = Depends(db.get_db),
+    payload: dict = Depends(auth_utils.get_token_payload)
 ):
-    try:
-        #get user id from payload
-        user_id=payload.get("sub")
-        #check that station id exist
-        station_found=station_db.find_one({"station_id":slot.station_id})
-        if not station_found:
-                return HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="station id not found ,Cant add slots",
-                                     headers={"message":"please enter a valid  station_id to add slot."})
-        # Convert Pydantic model to dict
-        slot_data = slot.dict()
-        #add admin user_id in slot db
-        slot_data["admin"]=user_id
-        # Insert the new slot
-        result = await  slot_db.insert_one(slot_data)
-        # Prepare response
-        slot_data["_id"] = str(result.inserted_id)
-        slot_data["station_id"] = str(slot_data["station_id"])
-        return slot_data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-#get slot for users
-@router.get("/",dependencies=[Depends(auth_utils.requires_role("user"))])
-async def fetch_slot(skip:int=0,limit:int=0,slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
-               payload:str=Depends(auth_utils.get_token_payload)):
-    slots_cursor= slot_db.find({"is_available":"True"})
-    available_slot=[]
-    async for doc in slots_cursor:
-        available_slot.append(doc)
-    return available_slot
-     
-# Get  Slot By ID for users
-@router.get("/{id}", dependencies=[Depends(auth_utils.requires_role("user"))],
-            response_model=schemas.SlotOut)
-async def get_slot(id:str, slot_db: AsyncIOMotorCollection = Depends(db.get_parking_collection),
-                   payload:str=Depends(auth_utils.get_token_payload)):
-    result = await slot_db.find_one({"slot_id":id})
-    if not result:
+    admin_id = payload.get("sub")
+
+    # check that station exists
+    station = db.query(models.Parking).filter(models.Parking.id == slot.station_id).first()
+    if not station:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Station id not found. Cannot add slots.",
+            headers={"message": "Please enter a valid station_id to add slot."}
+        )
+     # Create new slot object
+    new_slot = models.Slot(
+        station_id=slot.station_id,
+        slot_number=slot.slot_number,
+        slot_type=slot.slot_type,
+        status=slot.status,
+        admin_id=admin_id)
+    db.add(new_slot)
+    db.commit()
+    db.refresh(new_slot)
+
+    return new_slot
+
+
+# ------------------------
+# GET AVAILABLE SLOTS (USER)
+# ------------------------
+@router.get("/",response_model=schemas.SlotShow, dependencies=[Depends(auth_utils.requires_role("user"))])
+def fetch_slot(
+    db: Session = Depends(db.get_db),
+    payload: dict = Depends(auth_utils.get_token_payload),
+    skip: int = 0,
+    limit: int = 10
+):
+    slots = db.query(models.Slot).filter(models.Slot.status == True).offset(skip).limit(limit).all()
+    return slots
+
+
+# ------------------------
+# GET SLOT BY ID (USER)
+# ------------------------
+@router.get("/{id}", dependencies=[Depends(auth_utils.requires_role("user"))], response_model=schemas.SlotOut)
+def get_slot(
+    id: int,
+    db: Session = Depends(db.get_db),
+    payload: dict = Depends(auth_utils.get_token_payload)
+):
+    slot = db.query(models.Slot).filter(models.Slot.id == id).first()
+    if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
+    return slot
 
-    slot_response = {
-        "slot_id": str(result["_id"]),
-        "station_id": str(result["station_id"]),
-        "is_available": result["is_available"],
-        "charging_support": result["charging_support"]
-    }
 
-    return schemas.SlotOut(**slot_response)
+# ------------------------
+# GET ALL SLOTS POSTED BY ADMIN (SUPERADMIN)
+# ------------------------
+@router.get("/-admin", dependencies=[Depends(auth_utils.requires_role("superadmin"))])
+def get_slots(
+    db: Session = Depends(db.get_db),
+    payload: dict = Depends(auth_utils.get_token_payload)
+):
+    user_id = payload.get("sub")
 
-#get all the posted slots for admin
-@router.get("/-admin",dependencies=[Depends(auth_utils.requires_role("superadmin"))])
-async def get_slots(slot_db:AsyncIOMotorCollection=Depends(db.get_parking_collection),
-                    payload:dict=Depends(auth_utils.get_token_payload)):
-    #get user_id from payload
-    user_id=payload.get("sub")
-    slots_cursor=slot_db.find({"admin":user_id})
-    slots=[]
-    async for documents in slots_cursor:
-        documents["_id"]=str(documents["_id"])
-        slots.append(documents)
-    return JSONResponse(status_code=status.HTTP_200_OK,content={"slots":slots})
-
+    slots = db.query(models.Slot).filter(models.Slot.admin_id == user_id).all()
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"slots": [s.__dict__ for s in slots]})

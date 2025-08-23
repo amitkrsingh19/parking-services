@@ -1,35 +1,67 @@
 from pydantic import BaseModel
 from typing import Optional,Dict
-from datetime import datetime
-from  pydantic.config import ConfigDict
+import enum
+
+#  --------ENUMS---------
+class SlotStatus(enum.Enum):
+    available="available"
+    booked="booked"
+    cancelled="cancelled"
+
+class SlotType(enum.Enum):
+    car="car"
+    bike="bike"
+    ev="ev"
 
 #add slot data
 class SlotCreate(BaseModel):
-    station_id: str  # Reference to a station
-    slot_id:str
-    is_available: bool = True
-    price_per_hour:int
-    charging_support: bool
+    station_id : int
+    slot_number: str
+    slot_type:SlotType
+    status : SlotStatus
+
+    class config:
+        orm_mode=True
+    
 #slot output
 class SlotOut(BaseModel):
-    slot_id: str
-    station_id: str
-    is_available: bool
-    charging_support: bool
+    station_id : int
+    slot_number: str
+    slot_type:SlotType
+    status : SlotStatus
+    admin_id:int
 
+    class config:
+        orm_mode=True
+# show slots to the user
+class SlotShow(BaseModel):
+    station_id:int
+    slot_id:str
+    location:str
+    slot_number:str
+    slot_type:SlotType
+    status:SlotStatus
+
+    class config:
+        orm_mode=True
 #admin station input
-class stationin(BaseModel):
-    station_id:str
+class StationIn(BaseModel):
     station_name:str
     location:str
-    total_slots:int
+    capacity:int
+
+    class config:
+        orm_mode=True
 
 #station output 
 class StationOut(BaseModel):
     station_id: str
     station_name: str
     location: str
-    total_slots: int
+    capacity: int
+
+    class config:
+        orm_mode=True
 
 #past/upcoming booking response
 class Dashboard(BaseModel):

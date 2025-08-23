@@ -1,30 +1,21 @@
-from pydantic_settings import BaseSettings
-import socket
+from pydantic import BaseSettings
 
-#REFRESH_TOKEN_EXPIRATION_TIME = int(os.getenv("REFRESH_TOKEN_EXPIRATION_TIME", 10080))
 class Settings(BaseSettings):
-    SECRET_KEY: str
-    ALGORITHM: str
-    ACCESS_TOKEN_EXPIRATION_TIME: int
-    USER_SERVICES_DB: str
-    PARKING_SERVICES_DB:str
-    MONGO_URI:str
+    DB_HOSTNAME: str = "localhost"
+    DB_PORT: int = 5432
+    DB_PASSWORD: str = "password"
+    DB_NAME: str = "mydb"
+    DB_USERNAME: str = "user"
+    SECRET_KEY: str = "supersecretkey"
+    ALGORITHMS: str = "HS256"
+    ACCESS_TOKEN_EXPIRATION_TIME: int = 30
 
-    @property
-    def mongo_uri(self) -> str:
-        host = "mongo" if self._is_docker() else "localhost"
-        return f"mongodb://{host}:27017"
+    model_config = {
+        "env_file": ".env",
+        "extra": "ignore"
+    }
 
-    def _is_docker(self) -> bool:
-        try:
-            socket.gethostbyname("mongo")
-            return True
-        except socket.error:
-            return False
 
-    model_config={
-        "env_file" : ".env",
-        "extra":"ignore",
-        }
 
-settings = Settings() # type: ignore
+settings = Settings()
+print("Loaded DB Port:", settings.DB_PORT)
