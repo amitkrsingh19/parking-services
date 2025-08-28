@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from app.routes import user, login, admin 
-from app.database.db import Base, engine
-from app.models.models import User,Admin  
+from app.database.db import Base, engine 
 
 app = FastAPI(version="1.0.0")
 

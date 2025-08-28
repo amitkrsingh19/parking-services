@@ -19,9 +19,9 @@ async def CreateUser(user: schemas.UserCreate,
     user.password=hashed_password
 
     # Insert into MongoDB
-    new_user=models.User(**user.model_dump())
+    new_user=models.User(**user.dict())
 
-    user_return = user.model_dump()
+    user_return = user.dict()
     user_return.pop("password", None)  # Remove password from response
     db.add(new_user)
     db.commit()

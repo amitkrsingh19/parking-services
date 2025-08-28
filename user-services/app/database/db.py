@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from app.configs import settings
 
 # -----POSTGRE SQL database------------
-SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.DB_USERNAME}:{settings.DB_PASSWORD}@{settings.DB_HOSTNAME}:{settings.DB_PORT}/{settings.DB_NAME}"
+SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg2://{settings.DB_USERNAME}:{settings.DB_PASSWORD}@{settings.DB_HOSTNAME}:{settings.DB_PORT}/{settings.DB_NAME}"
 
 engine=create_engine(SQLALCHEMY_DATABASE_URL,echo=True)
 

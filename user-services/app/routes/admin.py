@@ -35,7 +35,7 @@ async def create_admin(admin: schemas.UserCreate,
     admin.password= hashed_password
     
     # Insert the new user
-    new_admin=models.Admin(**admin.model_dump())
+    new_admin=models.Admin(**admin.dict())
     db.add(new_admin)
     db.commit()
     db.refresh(new_admin)

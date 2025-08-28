@@ -18,6 +18,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
 print("Loaded DB Port:", settings.DB_PORT)
 
 """

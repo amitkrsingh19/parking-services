@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from sqlalchemy import Column,Integer,String,ForeignKey,DateTime,Enum,DECIMAL
-from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime       
 import enum
 from app.database.db import Base
