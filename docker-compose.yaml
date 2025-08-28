@@ -1,25 +1,15 @@
 services:
-  mongo:
-    image: mongo:6.0
-    container_name: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-
-  booking_services:
-    build:
-      context: ./booking-services
-      dockerfile: Dockerfile
-    container_name: booking-services
-    ports:
-      - "8003:8000"
-    depends_on:
-      - mongo
+  db:
+    image: postgres:15
+    container_name: postgres-db
     environment:
-      - MONGO_URI=mongodb://host.docker.internal:27017
-      - USER_SERVICES_DB=user_services_db
-      - PARKING_SERVICES_DB=PARKING_SERVICES_DB
+      DB_USERNAME: postgres
+      DB_PASSWORD: yourpassword
+      DB_NAME: user_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   user_services:
     build:
@@ -28,11 +18,8 @@ services:
     container_name: user-services
     ports:
       - "8002:8000"
-    depends_on:
-      - mongo
-    environment:
-      - MONGO_URI=mongodb://host.docker.internal:27017
-      - USER_SERVICES_DB=user_services_db
+    env_file:
+      - ./user-services/.env   
 
   parking_services:
     build:
@@ -42,18 +29,20 @@ services:
     ports:
       - "8001:8000"
     depends_on:
-      - mongo
+      - user_services
+      - db
+    env_file:
+      - ./parking-services/.env   
   gateway-services:
     build: 
       context: ./gateway-api
       dockerfile: Dockerfile
     container_name: gateway-services
     ports:
-      - "8000:8000"  # Expose the gateway to your host machine
+      - "8000:8000"
     depends_on:
       - user_services
       - parking_services
-      - booking_services
 
 volumes:
-  mongo_data:
+  postgres_data:
