@@ -26,10 +26,8 @@ def get_booking(
             detail="No station found - admin should add station first"
         )
 
-    # Get all bookings for that station
-    bookings = db.query(models.Booking).filter(models.Booking.slot_id.in_(
-        db.query(models.Slot.id).filter(models.Slot.station_id == admin_station.id)
-    )).all()
+    # Get all bookings for that station by joining booking and station table
+    bookings = db.query(models.Booking).join(models.Slot,models.Slot.id== models.Booking.slot_id ,isouter=True ).group_by(models.Booking.id).all()
 
     return bookings
 

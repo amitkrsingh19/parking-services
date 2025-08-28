@@ -47,7 +47,7 @@ def book_slot(
         raise HTTPException(status_code=409, detail="Slot already booked for this time range")
 
     # Mark slot as booked
-    slot_obj.status = SlotStatus.booked
+    slot_obj["status"] = SlotStatus.booked
     db.commit()
 
     # Create booking record
@@ -129,7 +129,7 @@ def cancel_booking(
     # Free up the slot
     slot_obj = db.query(Slot).filter(Slot.id == booking_obj.slot_id).first()
     if slot_obj:
-        slot_obj.status = "available"
+        slot_obj["status"] = SlotStatus.available
 
     # Delete the booking
     db.delete(booking_obj)

@@ -37,8 +37,8 @@ class Slot(Base):
     id = Column(Integer, primary_key=True, index=True)
     station_id = Column(Integer, ForeignKey("station.id", ondelete="CASCADE"), nullable=False)
     slot_number= Column(String,nullable=False)
-    slot_type=Column(Enum(SlotType))
-    status = Column(Enum(SlotStatus), default=SlotStatus.available)
+    slot_type=Column(Enum(SlotType,name='slottype'),nullable=False)
+    status = Column(Enum(SlotStatus,name="slotstatus"), default=SlotStatus.available)
     price_per_hour=Column(Integer,nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     admin_id = Column(Integer, nullable=False)
@@ -49,7 +49,7 @@ class Slot(Base):
     # One slot → many bookings
     bookings = relationship("Booking", back_populates="slot", cascade="all, delete-orphan")
 
-# ---SLOT TABLE---
+# ---BOOKINGS TABLE---
 class Booking(Base):
     __tablename__ = "bookings"
 
@@ -58,8 +58,8 @@ class Booking(Base):
     slot_id = Column(Integer, ForeignKey("slots.id", ondelete="CASCADE"), nullable=False)
     start_time=Column(DateTime,default=datetime.utcnow)
     end_time=Column(DateTime,nullable=False)
-    status = Column(Enum(SlotStatus), default=SlotStatus.booked)
+    status = Column(Enum(SlotStatus, name="slotstatus"),default=SlotStatus.booked,nullable=False)
     price=Column(DECIMAL)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    slot=relationship("Slot",back_populates="bookinngs")
+    slot = relationship("Slot", back_populates="bookings")
