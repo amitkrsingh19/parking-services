@@ -1,43 +1,49 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-from app.database import db
-from app.models import models, schemas
-from app.dependencies.utils import verify_password
 from fastapi.security import OAuth2PasswordRequestForm
-from app.dependencies import auth_handler
- 
+from sqlalchemy.orm import Session
+from app.models import models 
+from app.database import db
+from typing import Union
+from app.dependencies.utils import verify_password
+from app.dependencies.auth_handler import create_access_token
 
-router = APIRouter(prefix="/login", tags=["login"])
+router = APIRouter(tags=["Login"])
 
-# User/Admin login Endpoint
-@router.post("/")
-async def login_user(user_credentials: OAuth2PasswordRequestForm = Depends(),
-                     db: Session = Depends(db.get_db)):
-    email=user_credentials.username
-    # Find the user by email (treating username as email)
+@router.post("/login/")
+async def login_user(
+    user_credentials: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(db.get_db)
+):
+    email = user_credentials.username
+    password = user_credentials.password
+
+    # Try to find user in Users table
     user = db.query(models.User).filter(models.User.email == email).first()
-    if not user:
+
+    # Try to find user in Admins table
+    admin = db.query(models.Admin).filter(models.Admin.email == email).first()
+
+    # If not found in either → invalid email
+    if not user and not admin:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Invalid credentials"}
+            content={"message": "Invalid email credentials"}
         )
 
-    # Verify the provided password
-    if not verify_password(user_credentials.password, user.password):
+    # Pick whichever exists (User or Admin)
+    db_user: Union[models.User, models.Admin]
+    db_user = user if user else admin
+
+    # Verify password
+    if not verify_password(password, db_user.password):  # type: ignore
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Invalid credentials"}
+            content={"message": "Invalid password"}
         )
 
-    # Create the payload with the user's role
-    payload = {
-        "sub": str(user.id),
-        "email": user.email,
-        "role": user.role
-    }
-    
-    # Create the access token
-    access_token = auth_handler.create_access_token(payload)
+    # Create JWT token with role info
+    token_data = {"sub": db_user.email, "role": db_user.role} # type: ignore
+    access_token = create_access_token(token_data)
 
     return {"access_token": access_token, "token_type": "bearer"}

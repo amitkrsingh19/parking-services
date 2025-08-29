@@ -55,7 +55,7 @@ async def get_user_by_id(user_id: str,
     
 # Delete a user by ID (superadmin only)
 @router.delete("/{user_id}", dependencies=[Depends(auth_handler.requires_role("superadmin"))])
-async def delete_user(user_id: str,
+async def delete_user(user_id:int,
                       db: Session = Depends(db.get_db)):
     try:
         # Check if the user to be deleted exists
@@ -118,7 +118,6 @@ async def get_profile(db: Session = Depends(db.get_db),
     return user_data
 
 #Update profile (Users)
-@router.patch("/profile/update", dependencies=[Depends(auth_handler.requires_role("user"))])
 @router.patch("/profile/update", dependencies=[Depends(auth_handler.requires_role("user"))])
 def update_user(
     user_update_data: schemas.UpdateUser,
