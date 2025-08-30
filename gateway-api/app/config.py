@@ -6,9 +6,10 @@ class Settings(BaseSettings):
     ALGORITHM:str
     ACCESS_TOKEN_EXPIRATION_TIME:int 
 
-    model_Config={
-        "env_file" : ".env"
-        }
+    model_config = {
+        "env_file": ".env",
+        "extra": "ignore"
+    }
 
 settings = Settings() # type: ignore
     

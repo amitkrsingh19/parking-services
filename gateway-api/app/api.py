@@ -5,20 +5,22 @@ from httpx import AsyncClient
 from jose import jwt, JWTError
 from app.config import settings
 
+
 router = APIRouter()
 
 # Service URLs (internal docker-compose network)
 SERVICES = {
-    "user": "http://user_services:8000",
-    "parking": "http://parking_services:8000",
-    "booking": "http://booking_services:8000",
+    "users": "http://user_services:8000",
+    "parking": "http://parking_services:8000"
 }
 
 # Shared HTTP client
 client = AsyncClient(timeout=30.0)
 
 # OAuth2 token dependency (gateway handles auth at /login/)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/")
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="http://localhost:8002/login"  # external gateway route
+)
 
 # ---------------------------
 # Utility functions
@@ -62,12 +64,9 @@ async def get_current_user_payload(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-
 # ---------------------------
 # Public Routes
 # ---------------------------
-
-@router.api_route("/user/users", methods=["POST", "OPTIONS"])
 @router.api_route("/user/users/", methods=["POST", "OPTIONS"])
 async def proxy_create_user(request: Request):
     """Public: Create a new user (no auth required)."""
@@ -81,15 +80,13 @@ async def proxy_create_user(request: Request):
 async def proxy_login(request: Request):
     """Public: Forward login requests to user service."""
     try:
-        return await forward_request(SERVICES["user"].rstrip("/") + "/login/", request)
+        return await forward_request(SERVICES["users"].rstrip("/") + "/login/", request)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"user service unavailable: {e}")
-
 
 # ---------------------------
 # Protected Routes
 # ---------------------------
-
 @router.api_route("/{service_name}/{path:path}", methods=["GET", "POST", "DELETE", "PATCH", "PUT", "OPTIONS"])
 async def gateway_proxy(
     service_name: str,
@@ -112,7 +109,6 @@ async def gateway_proxy(
         return await forward_request(target_url, request)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"{service_name} service unavailable: {e}")
-
 
 # ---------------------------
 # Debug Routes
