@@ -43,7 +43,7 @@ async def login_user(
         )
 
     # Create JWT token with role info
-    token_data = {"sub": db_user.email, "role": db_user.role} # type: ignore
+    token_data = {"sub": db_user.email,"id":db_user.id ,"role": db_user.role} # type: ignore
     access_token = create_access_token(token_data)
 
     return {"access_token": access_token, "token_type": "bearer"}

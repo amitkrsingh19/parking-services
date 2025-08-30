@@ -7,6 +7,7 @@ from app.dependencies import auth_handler
 from datetime import datetime
 from sqlalchemy import func
 
+
 router=APIRouter(prefix="/admins",tags=["admin"])
 
 #   role:superadmin ,register new admin
@@ -43,7 +44,7 @@ async def create_admin(admin: schemas.UserCreate,
 
 # Get all users (superadmin only)
 @router.get("/all", dependencies=[Depends(auth_handler.requires_role("superadmin"))])
-async def get_all_users(skip: int = 0, limit: int = 10,
+def get_all_users(skip: int = 0, limit: int = 10,
                         db: Session = Depends(db.get_db)):
     # look for all  the user in Database
     users = db.query(models.Admin).offset(skip).limit(limit).all()
