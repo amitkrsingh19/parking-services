@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.models import schemas, models
 from app.database import db 
-from app.dependencies import auth_utils
+from app.utils import auth_utils
 from fastapi.responses import JSONResponse
+from typing import List
 
 router = APIRouter(
     prefix="/slots",
@@ -13,16 +14,17 @@ router = APIRouter(
 # ------------------------
 # CREATE SLOT (ADMIN ONLY)
 # ------------------------
-@router.post("/",response_model=schemas.SlotOut)
+@router.post("/",response_model=List[schemas.SlotWithStationOut],dependencies=[Depends(auth_utils.requires_role("admin"))])
 def create_slot(
     slot: schemas.SlotCreate,
     db: Session = Depends(db.get_db),
     payload: dict = Depends(auth_utils.get_token_payload)
 ):
-    admin_id = payload.get("sub")
+    admin_id = payload.get("id")
 
     # check that station exists
     station = db.query(models.Parking).filter(models.Parking.id == slot.station_id).first()
+    print(station)
     if not station:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -34,12 +36,14 @@ def create_slot(
         station_id=slot.station_id,
         slot_number=slot.slot_number,
         slot_type=slot.slot_type,
+        price_per_hour=slot.price_per_hour,
         status=slot.status,
         admin_id=admin_id)
+    
     db.add(new_slot)
     db.commit()
     db.refresh(new_slot)
-
+    new_slot={"station":station}
     return new_slot
 
 
@@ -60,7 +64,7 @@ def fetch_slot(
 # ------------------------
 # GET SLOT BY ID (USER)
 # ------------------------
-@router.get("/{id}", dependencies=[Depends(auth_utils.requires_role("user"))], response_model=schemas.SlotOut)
+@router.get("/{id}", dependencies=[Depends(auth_utils.requires_role("user"))], response_model=schemas.SlotWithStationOut)
 def get_slot(
     id: int,
     db: Session = Depends(db.get_db),
@@ -80,7 +84,7 @@ def get_slots(
     db: Session = Depends(db.get_db),
     payload: dict = Depends(auth_utils.get_token_payload)
 ):
-    user_id = payload.get("sub")
+    user_id = payload.get("id")
 
     slots = db.query(models.Slot).filter(models.Slot.admin_id == user_id).all()
     return JSONResponse(status_code=status.HTTP_200_OK, content={"slots": [s.__dict__ for s in slots]})

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
 from app.database import db
-from app.dependencies import auth_utils
+from app.utils import auth_utils
 from app.models import models ,schemas
 
 router = APIRouter(prefix="/bookings/admin", tags=["admin booking"])
@@ -40,7 +40,7 @@ def get_dashboard(
     db: Session = Depends(db.get_db),
     payload: dict = Depends(auth_utils.get_token_payload)
 ):
-    user_id = payload.get("sub")
+    user_id = payload.get("id")
     now = datetime.utcnow()
 
     # Get admin's station

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 
 from app.database import db
-from app.dependencies import auth_utils
+from app.utils import auth_utils
 from app.models import schemas, models
 
 router = APIRouter(
@@ -14,8 +14,7 @@ router = APIRouter(
 # ----------------------------
 # POST Station (Admin only)
 # ----------------------------
-@router.post(
-    "/",
+@router.post("/",
     dependencies=[Depends(auth_utils.requires_role("admin"))],
     response_model=schemas.StationOut
 )
@@ -25,7 +24,7 @@ def add_station(
     payload: dict = Depends(auth_utils.get_token_payload)
 ):
     try:
-        user_id = payload.get("sub")
+        user_id = payload.get("id")
 
         # Check if station already exists by name/location combo
         station_exist = (
@@ -44,7 +43,7 @@ def add_station(
         # One admin → one station (enforced)
         admin_exist = (
             db.query(models.Parking)
-            .filter(models.Parking.owner_id == user_id)
+            .filter(models.Parking.admin_id == user_id)
             .first()
         )
         if admin_exist:
@@ -59,7 +58,7 @@ def add_station(
             name=station.station_name,
             location=station.location,
             capacity=station.capacity,
-            owner_id=user_id,
+            admin_id=user_id,
         )
         db.add(new_station)
         db.commit()
@@ -86,7 +85,7 @@ def del_station(
     payload: dict = Depends(auth_utils.get_token_payload)
 ):
     try:
-        user_id = payload.get("sub")
+        user_id = payload.get("id")
 
         station = db.query(models.Parking).filter(
             models.Parking.id == station_id
@@ -100,7 +99,7 @@ def del_station(
 
         # If user is admin → must be owner; superadmin bypasses
         role = payload.get("role")
-        if role == "admin" and station.owner_id != user_id:
+        if role == "admin" and station.admin_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Admins can only delete their own stations"
@@ -119,8 +118,7 @@ def del_station(
 # ----------------------------
 # GET Station by ID (Any role)
 # ----------------------------
-@router.get(
-    "/{station_id}",
+@router.get("/{station_id}",
     dependencies=[Depends(auth_utils.requires_role("user"))]
 )
 def get_station(

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional,Dict
+from typing import Optional,Dict,List
 import enum
 from datetime import datetime
 
@@ -14,38 +14,7 @@ class SlotType(str,enum.Enum):
     bike="bike"
     ev="ev"
 
-#add slot data
-class SlotCreate(BaseModel):
-    station_id : int
-    slot_number: str
-    slot_type:SlotType
-    status : SlotStatus
-
-    class config:
-        orm_mode=True
-    
-#slot output
-class SlotOut(BaseModel):
-    station_id : int
-    slot_number: str
-    slot_type:SlotType
-    status : SlotStatus
-    admin_id:int
-
-    class config:
-        orm_mode=True
-# show slots to the user
-class SlotShow(BaseModel):
-    station_id:int
-    slot_id:str
-    location:str
-    slot_number:str
-    slot_type:SlotType
-    status:SlotStatus
-
-    class config:
-        orm_mode=True
-#admin station input
+# ADD admin station
 class StationIn(BaseModel):
     station_name:str
     location:str
@@ -54,15 +23,50 @@ class StationIn(BaseModel):
     class config:
         orm_mode=True
 
-#station output 
-class StationOut(BaseModel):
+# station output 
+class StationOut(StationIn):
     station_id: str
-    station_name: str
-    location: str
-    capacity: int
+
+# Add slot in db
+class SlotCreate(BaseModel):
+    station_id : int
+    slot_number: str
+    slot_type:SlotType
+    price_per_hour:float
+    status : SlotStatus
 
     class config:
         orm_mode=True
+    
+#slot output
+class SlotWithStationOut(BaseModel):
+    id: int
+    station_id: int
+    slot_number: int
+    slot_type: str
+    status: str
+    price_per_hour: float
+    created_at: datetime
+    admin_id: int
+    
+    # Nested Pydantic model for the station data
+    station: StationOut  
+    
+    class Config:
+        orm_mode = True
+
+# show slots to the user
+class SlotShow(StationOut):
+    station:StationOut
+    slot_id:str
+    location:str
+    slot_number:str
+    slot_type:SlotType
+    status:SlotStatus
+    
+    class Config:
+        orm_mode=True
+
 
 #past/upcoming booking response
 class Dashboard(BaseModel):

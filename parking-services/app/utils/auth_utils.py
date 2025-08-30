@@ -1,11 +1,11 @@
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt,JWTError
 from fastapi import Depends,HTTPException,status
-from app.config import settings
+from app.core.config import settings
 from typing import Dict,Any
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://localhost:8000/login/")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 #get token payload
 def get_token_payload(token:str=Depends(oauth2_scheme))->Dict[str,Any]:
     credential_exception = HTTPException(
@@ -17,6 +17,7 @@ def get_token_payload(token:str=Depends(oauth2_scheme))->Dict[str,Any]:
         return payload
     except JWTError:
         raise credential_exception
+  
 # role-checker dependency
 def requires_role(required_role: str):
     def role_checker(payload: Dict[str, Any] = Depends(get_token_payload)):
@@ -27,4 +28,6 @@ def requires_role(required_role: str):
             )
         return payload
     return role_checker
+
+
 

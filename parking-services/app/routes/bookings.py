@@ -3,7 +3,7 @@ from typing import cast
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from app.database import db
-from app.dependencies import auth_utils
+from app.utils import auth_utils
 from app.models.models import Booking, Slot
 from app.models.schemas import BookSlot, Bookedslot, UserDashboard
 from app.models.schemas import SlotStatus
@@ -19,7 +19,7 @@ def book_slot(
     payload: dict = Depends(auth_utils.get_token_payload),
     db: Session = Depends(db.get_db)
 ):
-    user_id = payload.get("sub")
+    user_id = payload.get("id")
 
     # Define booking start and end times
     start_time = datetime.utcnow()
@@ -74,7 +74,7 @@ def user_bookings(
     db: Session = Depends(db.get_db),
     payload: dict = Depends(auth_utils.get_token_payload)
 ):
-    user_id = payload.get("sub")
+    user_id = payload.get("id")
     bookings = db.query(Booking).filter(Booking.user_id == user_id).order_by(Booking.start_time.desc()).all()
     return bookings
 
@@ -86,7 +86,7 @@ def user_dashboard(
     db: Session = Depends(db.get_db),
     payload: dict = Depends(auth_utils.get_token_payload)
 ):
-    user_id = payload.get("sub")
+    user_id = payload.get("id")
     now = datetime.utcnow()
 
     past_count = db.query(Booking).filter(
