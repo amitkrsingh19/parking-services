@@ -86,11 +86,11 @@ export const authAPI = {
   
   login: async (email, password) => {
     // Use form data format as expected by OAuth2PasswordRequestForm
-    const formData = new FormData();
-    formData.append('username', email);  // OAuth2 expects 'username' field
-    formData.append('password', password);
+    const body = new URLSearchParams();
+    body.append("username", email);
+    body.append("password", password);
     
-    const response = await apiClient.post('/login/', formData, {
+    const response = await apiClient.post('/login/', body.toString(), {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       }

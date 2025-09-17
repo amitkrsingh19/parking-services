@@ -5,7 +5,7 @@ from app.core.config import settings
 from typing import Dict,Any
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://localhost:8000/login/")
 #get token payload
 def get_token_payload(token:str=Depends(oauth2_scheme))->Dict[str,Any]:
     credential_exception = HTTPException(
@@ -13,7 +13,7 @@ def get_token_payload(token:str=Depends(oauth2_scheme))->Dict[str,Any]:
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},)
     try:
-        payload=jwt.decode(token,settings.SECRET_KEY,algorithms=settings.ALGORITHMS)
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHMS])
         return payload
     except JWTError:
         raise credential_exception

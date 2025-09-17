@@ -8,10 +8,13 @@ class UserCreate(BaseModel):
     email:EmailStr
     password:str
     name:str
-    phone:str
+    phone: Optional[str] = None
 #   To validate phone number from user
     @validator("phone")
     def validate_phone(cls, v):
+        # allow empty/None phone (optional)
+        if v is None or v == "":
+            return v
         if not re.match(r'^\+?\d{10,15}$', v):
             raise ValueError("Invalid phone number format")
         return v
@@ -29,4 +32,4 @@ class UpdateUser(BaseModel):
     name:Optional[str]
     email:Optional[EmailStr]
     password:Optional[str]
-    phone:Optional[int]
+    phone:Optional[str]

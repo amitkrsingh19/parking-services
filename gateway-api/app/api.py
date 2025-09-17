@@ -33,6 +33,8 @@ async def forward_request(target_url: str, request: Request) -> Response:
     params = dict(request.query_params)
     content = await request.body()
 
+    # Debug: log forwarding info
+    print(f"[gateway] Forwarding {method} {request.url.path} -> {target_url}")
     resp = await client.request(
         method=method,
         url=target_url,
@@ -47,11 +49,18 @@ async def forward_request(target_url: str, request: Request) -> Response:
         if k.lower() not in ("transfer-encoding", "content-encoding", "content-length", "connection")
     }
 
+    print(f"[gateway] Received {resp.status_code} from {target_url} (content-type: {content_type})")
     if "application/json" in content_type:
         try:
             body = resp.json()
         except Exception:
             body = resp.text
+        # Truncate large bodies when printing
+        try:
+            body_preview = body if isinstance(body, str) else str(body)
+        except Exception:
+            body_preview = "<unprintable>"
+        print(f"[gateway] Response preview: {body_preview[:400]}")
         return JSONResponse(status_code=resp.status_code, content=body, headers=safe_headers)
 
     return Response(content=resp.content, status_code=resp.status_code, headers=safe_headers, media_type=content_type)
@@ -71,7 +80,7 @@ async def get_current_user_payload(token: str = Depends(oauth2_scheme)):
 async def proxy_create_user(request: Request):
     """Public: Create a new user (no auth required)."""
     try:
-        return await forward_request(SERVICES["user"].rstrip("/") + "/users/", request)
+        return await forward_request(SERVICES["users"].rstrip("/") + "/users/", request)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"user service unavailable: {e}")
 
@@ -118,7 +127,7 @@ async def gateway_proxy(
 async def test_user_service():
     """Debug: Check connectivity to user service."""
     try:
-        resp = await client.get(SERVICES["user"].rstrip("/") + "/")
+        resp = await client.get(SERVICES["users"].rstrip("/") + "/")
         return {"status": "success", "user_service": "accessible", "response": resp.text}
     except Exception as e:
         return {"status": "error", "user_service": "unaccessible", "error": str(e)}

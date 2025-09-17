@@ -1,5 +1,6 @@
 from fastapi import status, Depends,APIRouter,HTTPException
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from app.models import models ,schemas
 from app.dependencies.utils import hash_password
 from app.database import db
@@ -19,17 +20,31 @@ async def CreateUser(user: schemas.UserCreate,
     user.password=hashed_password
 
     # Insert into MongoDB
-    new_user=models.User(**user.dict())
+    new_user = models.User(**user.dict())
 
-    user_return = user.dict()
-    user_return.pop("password", None)  # Remove password from response
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content=user_return
-    )
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError as ie:
+        db.rollback()
+        # Likely duplicate email or phone
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User with this email or phone already exists")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    # prepare response without password and with DB-generated fields
+    user_return = {
+        "id": new_user.id,
+        "name": new_user.name,
+        "email": new_user.email,
+        "phone": new_user.phone,
+        "role": new_user.role.value if hasattr(new_user.role, 'value') else str(new_user.role),
+        "created_at": new_user.created_at.isoformat() if (new_user.created_at is not None) else None,
+    }
+
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content=user_return)
 
 # Get a single user by ID (superadmin only)
 @router.get("/{user_id}", dependencies=[Depends(auth_handler.requires_role("superadmin"))])
@@ -112,7 +127,7 @@ async def get_profile(db: Session = Depends(db.get_db),
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user id in token")
     user =  db.query(models.User).filter(models.User.id==oid).first()
     if not user:
-        return JSONResponse(status_code=status.HTTP_403_FORBIDDEN,content="user not found")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user not found")
     user_data=user.__dict__
     user_data.pop("password",None)
     return user_data

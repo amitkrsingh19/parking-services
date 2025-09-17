@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.models import models 
@@ -26,10 +25,7 @@ async def login_user(
 
     # If not found in either → invalid email
     if not user and not admin:
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Invalid email credentials"}
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email credentials")
 
     # Pick whichever exists (User or Admin)
     db_user: Union[models.User, models.Admin]
@@ -37,10 +33,7 @@ async def login_user(
 
     # Verify password
     if not verify_password(password, db_user.password):  # type: ignore
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Invalid password"}
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
 
     # Create JWT token with role info
     token_data = {"sub": db_user.email,"id":db_user.id ,"role": db_user.role} # type: ignore

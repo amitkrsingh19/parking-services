@@ -22,7 +22,7 @@ export default function AdminDashboard() {
       return;
     }
 
-    if (!isAdmin()) {
+    if (!isAdmin) {
       navigate("/dashboard");
       return;
     }
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
     return bookings.reduce((total, booking) => total + (booking.total_cost || 0), 0);
   };
 
-  if (!token || !isAdmin()) {
+  if (!token || !isAdmin) {
     return null;
   }
 

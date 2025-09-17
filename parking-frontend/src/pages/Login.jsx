@@ -48,38 +48,13 @@ export default function Login(){
       const response = await authAPI.login(email, password);
       console.log("📥 Login response:", response); // Debug log
       
-      if (response.access_token) {
-        console.log("✅ Access token received:", response.access_token.substring(0, 20) + "..."); // Debug log
-        
-        // Set token in localStorage and axios headers
-        setAuthToken(response.access_token);
-        
-        // Decode JWT token to get user info (basic implementation)
-        try {
-          const tokenParts = response.access_token.split('.');
-          if (tokenParts.length === 3) {
-            const payload = JSON.parse(atob(tokenParts[1]));
-            const userRole = payload.role || "user";
-            console.log("🔍 Decoded token payload:", payload); // Debug log
-            console.log("👤 User role:", userRole); // Debug log
-            
-            // Login with real data
-            login(response.access_token, email, userRole);
-            
-            // Navigate to dashboard
-            console.log("🚀 Navigating to dashboard..."); // Debug log
-            navigate("/dashboard");
-          } else {
-            throw new Error("Invalid token format");
-          }
-        } catch (tokenError) {
-          console.error("Token decode error:", tokenError);
-          // Fallback to user role if token decode fails
-          login(response.access_token, email, "user");
-          navigate("/dashboard");
-        }
+      if (response && response.access_token) {
+        console.log("✅ Access token received");
+        // Use AuthContext.login which will store token, decode payload, and set headers
+        login(response.access_token);
+        navigate("/dashboard");
       } else {
-        console.error("❌ No access_token in response:", response); // Debug log
+        console.error("❌ No access_token in response:", response);
         setErr("Invalid response from server");
       }
     } catch(error) {

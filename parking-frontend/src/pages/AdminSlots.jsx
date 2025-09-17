@@ -26,7 +26,7 @@ export default function AdminSlots() {
       return;
     }
 
-    if (!isAdmin()) {
+    if (!isAdmin) {
       navigate("/dashboard");
       return;
     }
@@ -164,7 +164,7 @@ export default function AdminSlots() {
     }
   };
 
-  if (!token || !isAdmin()) {
+  if (!token || !isAdmin) {
     return null;
   }
 

@@ -26,7 +26,7 @@ export default function AddStation() {
       return;
     }
 
-    if (!isAdmin()) {
+    if (!isAdmin) {
       navigate("/dashboard");
       return;
     }
@@ -144,7 +144,7 @@ export default function AddStation() {
     }
   };
 
-  if (!token || !isAdmin()) {
+  if (!token || !isAdmin) {
     return null;
   }
 
